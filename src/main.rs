@@ -54,7 +54,7 @@ fn main() {
                 .join_multicast_v4(ip, &interface)
                 .expect("valid join IPv4 multicast group");
             socket
-                .set_multicast_loop_v4(false)
+                .set_multicast_loop_v4(true)
                 .expect("setted loop option");
             let send_socket = socket.try_clone().expect("socket clone");
             (socket, send_socket)
