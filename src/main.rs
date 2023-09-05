@@ -40,7 +40,7 @@ fn main() {
         IpAddr::V4(ref ip) => {
             let socket: UdpSocket = UdpSocket::bind("0.0.0.0:48666").expect("Failed to bind ipv4");
             socket
-                .join_multicast_v4(ip, &Ipv4Addr::new(192, 168, 51, 0))
+                .join_multicast_v4(ip, &Ipv4Addr::new(0, 0, 0, 0))
                 .expect("valid join IPv4 multicast group");
             // socket
             //     .set_multicast_loop_v4(false)
