@@ -32,20 +32,32 @@ fn main() {
         })
         .expect("argument")
         .parse()
-        .expect("valid string at arg2");
+        .expect("valid ip address at arg2");
+    let interface: Ipv4Addr = args
+        .nth(2)
+        .or_else(|| {
+            println!("Interface address argument not found. Using 0.0.0.0");
+            Some(String::from("0.0.0.0"))
+        })
+        .expect("argument")
+        .parse()
+        .expect("valid ip address at arg2");
     if !ip.is_multicast() {
         panic!("Multicast address required");
     }
-    let socket = match ip {
+    let (liten_socket, send_socket) = match ip {
         IpAddr::V4(ref ip) => {
-            let socket: UdpSocket = UdpSocket::bind("0.0.0.0:48666").expect("Failed to bind ipv4");
+            let socket: UdpSocket = UdpSocket::bind((interface.clone(), 48666)).expect("Failed to bind ipv4");
             socket
-                .join_multicast_v4(ip, &Ipv4Addr::new(0, 0, 0, 0))
+                .join_multicast_v4(ip, &interface)
                 .expect("valid join IPv4 multicast group");
             socket
                 .set_multicast_loop_v4(false)
                 .expect("setted loop option");
-            socket
+            // let send_socket = socket.try_clone().expect("socket clone");
+            let send_socket = UdpSocket::bind((ip.clone(), 48667))
+                .expect("send socket creation");
+            (socket, send_socket)
         }
         IpAddr::V6(ref ip) => {
             let socket = UdpSocket::bind("[::]:48666").expect("Failed to bind ipv6");
@@ -56,15 +68,17 @@ fn main() {
                 .set_multicast_loop_v6(false)
                 .expect("setted loop option");
             socket
+                .set_nonblocking(false)
+                .expect("set blocking");
+            let send_socket = socket.try_clone().expect("socket clone");
+            (socket, send_socket)
         }
     };
 
     // socket.set_ttl(2).expect("setted ttl");
-    socket
+    liten_socket
         .set_read_timeout(Some(Duration::from_secs(TIMEOUT)))
         .expect("setted timeout");
-
-    let send_socket = socket.try_clone().expect("socket clone");
 
     let send_handle = std::thread::spawn(move || {
         let ip = SocketAddr::new(ip, 48666);
@@ -78,7 +92,7 @@ fn main() {
     let mut copies = HashMap::<SocketAddr, Instant>::new();
 
     loop {
-        match socket.recv_from(&mut buffer) {
+        match liten_socket.recv_from(&mut buffer) {
             Ok((_, addr)) => {
                 match copies.entry(addr) {
                     std::collections::hash_map::Entry::Vacant(e) => {
@@ -92,7 +106,10 @@ fn main() {
                 }
             }
             Err(e) => match e.kind() {
-                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut => {}
+                std::io::ErrorKind::WouldBlock => {
+                    println!("would block");    
+                }
+                std::io::ErrorKind::TimedOut => {}
                 _ => {
                     println!("recv error: {}", e);
                     break;
