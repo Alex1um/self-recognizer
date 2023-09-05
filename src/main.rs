@@ -54,9 +54,9 @@ fn main() {
             socket
                 .set_multicast_loop_v4(false)
                 .expect("setted loop option");
-            // let send_socket = socket.try_clone().expect("socket clone");
-            let send_socket = UdpSocket::bind((ip.clone(), 48667))
-                .expect("send socket creation");
+            let send_socket = socket.try_clone().expect("socket clone");
+            // let send_socket = UdpSocket::bind((ip.clone(), 48667))
+                // .expect("send socket creation");
             (socket, send_socket)
         }
         IpAddr::V6(ref ip) => {
@@ -88,36 +88,39 @@ fn main() {
         }
     });
 
-    let mut buffer = [0u8; 64];
-    let mut copies = HashMap::<SocketAddr, Instant>::new();
+    let recv_handle = std::thread::spawn(move || {
 
-    loop {
-        match liten_socket.recv_from(&mut buffer) {
-            Ok((_, addr)) => {
-                match copies.entry(addr) {
-                    std::collections::hash_map::Entry::Vacant(e) => {
-                        println!("New copy found: {:?}", addr);
-                        e.insert(Instant::now());
-                        println!("current copies: {:?}", copies.keys());
-                    }
-                    std::collections::hash_map::Entry::Occupied(mut e) => {
-                        e.insert(Instant::now());
+        let mut buffer = [0u8; 64];
+        let mut copies = HashMap::<SocketAddr, Instant>::new();
+
+        loop {
+            match liten_socket.recv_from(&mut buffer) {
+                Ok((_, addr)) => {
+                    match copies.entry(addr) {
+                        std::collections::hash_map::Entry::Vacant(e) => {
+                            println!("New copy found: {:?}", addr);
+                            e.insert(Instant::now());
+                            println!("current copies: {:?}", copies.keys());
+                        }
+                        std::collections::hash_map::Entry::Occupied(mut e) => {
+                            e.insert(Instant::now());
+                        }
                     }
                 }
+                Err(e) => match e.kind() {
+                    std::io::ErrorKind::WouldBlock => {
+                        println!("would block");    
+                    }
+                    std::io::ErrorKind::TimedOut => {}
+                    _ => {
+                        println!("recv error: {}", e);
+                        break;
+                    }
+                },
             }
-            Err(e) => match e.kind() {
-                std::io::ErrorKind::WouldBlock => {
-                    println!("would block");    
-                }
-                std::io::ErrorKind::TimedOut => {}
-                _ => {
-                    println!("recv error: {}", e);
-                    break;
-                }
-            },
+            check_hashmap(&mut copies)
         }
-        check_hashmap(&mut copies)
-    }
-
+    });
+    recv_handle.join().expect("successful join");
     send_handle.join().expect("successful join");
 }
