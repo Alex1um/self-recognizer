@@ -42,9 +42,9 @@ fn main() {
             socket
                 .join_multicast_v4(ip, &Ipv4Addr::new(0, 0, 0, 0))
                 .expect("valid join IPv4 multicast group");
-            socket
-                .set_multicast_loop_v4(false)
-                .expect("setted loop option");
+            // socket
+            //     .set_multicast_loop_v4(false)
+            //     .expect("setted loop option");
             socket
         }
         IpAddr::V6(ref ip) => {
