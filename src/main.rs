@@ -34,7 +34,7 @@ fn main() {
         .parse()
         .expect("valid ip address at arg2");
     let interface: Ipv4Addr = args
-        .nth(2)
+        .nth(0)
         .or_else(|| {
             println!("Interface address argument not found. Using 0.0.0.0");
             Some(String::from("0.0.0.0"))
