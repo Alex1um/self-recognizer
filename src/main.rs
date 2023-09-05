@@ -47,11 +47,11 @@ fn main() {
     }
     let (liten_socket, send_socket) = match ip {
         IpAddr::V4(ref ip) => {
-            let socket: UdpSocket = UdpSocket::bind("0.0.0.0:48666")
+            let socket: UdpSocket = UdpSocket::bind((interface, 48666))
             // let socket: UdpSocket = UdpSocket::bind((interface.clone(), 48666))
                 .expect("Failed to bind ipv4");
             socket
-                .join_multicast_v4(ip, &interface)
+                .join_multicast_v4(ip, &Ipv4Addr::new(0, 0, 0, 0))
                 .expect("valid join IPv4 multicast group");
             socket
                 .set_multicast_loop_v4(true)
