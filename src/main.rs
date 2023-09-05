@@ -36,17 +36,16 @@ fn main() {
     if !ip.is_multicast() {
         panic!("Multicast address required");
     }
-    let (socket, send_socket) = match ip {
+    let socket = match ip {
         IpAddr::V4(ref ip) => {
             let socket: UdpSocket = UdpSocket::bind("0.0.0.0:48666").expect("Failed to bind ipv4");
             socket
                 .join_multicast_v4(ip, &Ipv4Addr::new(0, 0, 0, 0))
                 .expect("valid join IPv4 multicast group");
-            // socket
-            //     .set_multicast_loop_v4(false)
-            //     .expect("setted loop option");
-            let send_socket: UdpSocket = UdpSocket::bind("0.0.0.0:48667").expect("Failed to bind ipv4");
-            (socket, send_socket)
+            socket
+                .set_multicast_loop_v4(false)
+                .expect("setted loop option");
+            socket
         }
         IpAddr::V6(ref ip) => {
             let socket = UdpSocket::bind("[::]:48666").expect("Failed to bind ipv6");
@@ -56,8 +55,7 @@ fn main() {
             socket
                 .set_multicast_loop_v6(false)
                 .expect("setted loop option");
-            let send_socket = socket.try_clone().expect("socket clone");
-            (socket, send_socket)
+            socket
         }
     };
 
@@ -66,7 +64,7 @@ fn main() {
         .set_read_timeout(Some(Duration::from_secs(TIMEOUT)))
         .expect("setted timeout");
 
-    // let send_socket = socket.try_clone().expect("socket clone");
+    let send_socket = socket.try_clone().expect("socket clone");
 
     let send_handle = std::thread::spawn(move || {
         let ip = SocketAddr::new(ip, 48666);
@@ -94,10 +92,7 @@ fn main() {
                 }
             }
             Err(e) => match e.kind() {
-                std::io::ErrorKind::WouldBlock => {
-                    println!("would block");
-                }
-                std::io::ErrorKind::TimedOut => {}
+                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut => {}
                 _ => {
                     println!("recv error: {}", e);
                     break;
