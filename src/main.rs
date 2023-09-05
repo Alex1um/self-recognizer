@@ -36,7 +36,7 @@ fn main() {
     if !ip.is_multicast() {
         panic!("Multicast address required");
     }
-    let socket = match ip {
+    let (socket, send_socket) = match ip {
         IpAddr::V4(ref ip) => {
             let socket: UdpSocket = UdpSocket::bind("0.0.0.0:48666").expect("Failed to bind ipv4");
             socket
@@ -45,7 +45,8 @@ fn main() {
             // socket
             //     .set_multicast_loop_v4(false)
             //     .expect("setted loop option");
-            socket
+            let send_socket: UdpSocket = UdpSocket::bind("0.0.0.0:48667").expect("Failed to bind ipv4");
+            (socket, send_socket)
         }
         IpAddr::V6(ref ip) => {
             let socket = UdpSocket::bind("[::]:48666").expect("Failed to bind ipv6");
@@ -55,7 +56,8 @@ fn main() {
             socket
                 .set_multicast_loop_v6(false)
                 .expect("setted loop option");
-            socket
+            let send_socket = socket.try_clone().expect("socket clone");
+            (socket, send_socket)
         }
     };
 
@@ -64,7 +66,7 @@ fn main() {
         .set_read_timeout(Some(Duration::from_secs(TIMEOUT)))
         .expect("setted timeout");
 
-    let send_socket = socket.try_clone().expect("socket clone");
+    // let send_socket = socket.try_clone().expect("socket clone");
 
     let send_handle = std::thread::spawn(move || {
         let ip = SocketAddr::new(ip, 48666);
@@ -92,7 +94,10 @@ fn main() {
                 }
             }
             Err(e) => match e.kind() {
-                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut => {}
+                std::io::ErrorKind::WouldBlock => {
+                    println!("would block");
+                }
+                std::io::ErrorKind::TimedOut => {}
                 _ => {
                     println!("recv error: {}", e);
                     break;
