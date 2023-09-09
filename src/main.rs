@@ -102,7 +102,7 @@ fn main() {
                 }
             }
             Err(e) => match e.kind() {
-                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock => {}
+                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock | std::io::ErrorKind::Interrupted => {}
                 _ => {
                     println!("recv error: {}", e);
                     break;
