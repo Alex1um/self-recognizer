@@ -6,12 +6,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-const TIMEOUT: u64 = 3;
+const TIMEOUT: f32 = 3.;
+const INTERVAL: f32 = 1.;
 
 fn check_hashmap(copies: &mut HashMap<SocketAddr, Instant>) {
     let prev_len = copies.len();
     copies.retain(|k, v| {
-        let is_ok = v.elapsed().as_secs() < TIMEOUT;
+        let is_ok = v.elapsed().as_secs_f32() < TIMEOUT;
         if !is_ok {
             println!("copy {} timed out", k);
         }
@@ -74,14 +75,14 @@ fn main() {
 
     // socket.set_ttl(2).expect("setted ttl");
     liten_socket
-        .set_read_timeout(Some(Duration::from_secs(TIMEOUT)))
+        .set_read_timeout(Some(Duration::from_secs_f32(TIMEOUT)))
         .expect("setted timeout");
 
     let send_handle = std::thread::spawn(move || {
         let ip = SocketAddr::new(ip, 48666);
         loop {
             send_socket.send_to("".as_bytes(), ip).expect("valid send");
-            std::thread::sleep(Duration::from_secs(1));
+            std::thread::sleep(Duration::from_secs_f32(INTERVAL));
         }
     });
 
