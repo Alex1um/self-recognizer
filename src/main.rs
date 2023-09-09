@@ -47,7 +47,7 @@ fn main() {
     }
     let (liten_socket, send_socket) = match ip {
         IpAddr::V4(ref ip) => {
-            let socket: UdpSocket = UdpSocket::bind((interface, 0))
+            let socket: UdpSocket = UdpSocket::bind((interface, 48666))
             // let socket: UdpSocket = UdpSocket::bind((interface.clone(), 48666))
                 .expect("Failed to bind ipv4");
             socket
